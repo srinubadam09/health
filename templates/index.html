@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Monitoring System</title>
+    <style>
+        :root {
+            --normal: #27ae60;
+            --warning: #f39c12;
+            --critical: #e74c3c;
+            --primary: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+            --light-green: #d4f7e0;
+            --light-orange: #ffecc7;
+            --light-red: #ffd1d1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .results-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .input-with-hint {
+            position: relative;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        input.valid {
+            border-color: var(--normal);
+        }
+        
+        input.invalid {
+            border-color: var(--critical);
+        }
+        
+        .range-hint {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-normal { background: var(--normal); }
+        .status-warning { background: var(--warning); }
+        .status-critical { background: var(--critical); }
+        
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background: var(--light);
+        }
+        
+        .result-section.normal { 
+            border-left: 5px solid var(--normal);
+            background: var(--light-green);
+        }
+        .result-section.warning { 
+            border-left: 5px solid var(--warning);
+            background: var(--light-orange);
+        }
+        .result-section.critical { 
+            border-left: 5px solid var(--critical);
+            background: var(--light-red);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .section-content {
+            line-height: 1.6;
+        }
+        
+        .vital-signs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .vital-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .vital-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .vital-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--primary);
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #ffeaea;
+            color: var(--critical);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--critical);
+            margin-bottom: 20px;
+        }
+        
+        .system-status {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* New Structured Styles */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .info-card h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .info-card p {
+            font-size: 0.85rem;
+            color: var(--dark);
+            font-weight: 500;
+        }
+        
+        .meal-plan {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .meal-time {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .meal-time::before {
+            content: "🍽️";
+            margin-right: 8px;
+        }
+        
+        .meal-content {
+            margin-left: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .weekly-plan {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .day-card {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .day-card.active {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+        
+        .day-name {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+        
+        .day-focus {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+        
+        .action-steps {
+            margin: 15px 0;
+        }
+        
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+        
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .food-category {
+            margin: 15px 0;
+        }
+        
+        .category-title {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .food-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .food-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--normal);
+        }
+        
+        .food-item.avoid {
+            border-left-color: var(--critical);
+            background: #ffebee;
+        }
+        
+        .tab-container {
+            margin: 20px 0;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .bullet-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .bullet-list li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .bullet-list li::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .highlight-box h3 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Health Monitoring System</h1>
+            <p>AI-Powered Vital Signs Analysis with ML + LLM</p>
+        </div>
+        
+        <div class="system-status" id="systemStatus">
+            Checking system status...
+        </div>
+        
+        <div class="dashboard">
+            <!-- Input Panel -->
+            <div class="input-panel">
+                <h2 class="panel-title">📊 Enter Vital Signs</h2>
+                
+                <div class="input-group">
+                    <label for="hr">❤️ Heart Rate (bpm)</label>
+                    <div class="input-with-hint">
+                        <input id="hr" type="number" placeholder="Enter 40-180 bpm" min="40" max="180" step="1">
+                        <div class="range-hint">Normal range: 60-100 bpm</div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="spo2">💨 SpO2 (%)</label>
+                    <div class="input-with-hint">
+                        <input id="spo2" type="number" placeholder="Enter 70-100%" min="70" max="100" step="0.1">
+                        <div class="range-hint">Normal range: 95-100%</div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="temp">🌡️ Temperature (°C)</label>
+                    <div class="input-with-hint">
+                        <input id="temp" type="number" placeholder="Enter 35-42°C" min="35" max="42" step="0.1">
+                        <div class="range-hint">Normal range: 36.1-37.2°C</div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="rr">🫀 RR Interval (ms)</label>
+                    <div class="input-with-hint">
+                        <input id="rr" type="number" placeholder="Enter 300-1200 ms" min="300" max="1200" step="1">
+                        <div class="range-hint">Typical range: 600-1000 ms</div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="hrv">📈 HRV (ms)</label>
+                    <div class="input-with-hint">
+                        <input id="hrv" type="number" placeholder="Enter 0-200 ms" min="0" max="200" step="1">
+                        <div class="range-hint">Normal range: 20-100 ms</div>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="predict()" id="predictBtn">Analyze Health Status</button>
+            </div>
+            
+            <!-- Results Panel -->
+            <div class="results-panel" id="resultsPanel">
+                <h2 class="panel-title">📋 Analysis Results</h2>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Input validation configuration
+        const inputs = ['hr', 'spo2', 'temp', 'rr', 'hrv'];
+        const ranges = {
+            hr: { min: 40, max: 180, normal: [60, 100] },
+            spo2: { min: 70, max: 100, normal: [95, 100] },
+            temp: { min: 35, max: 42, normal: [36.1, 37.2] },
+            rr: { min: 300, max: 1200, normal: [600, 1000] },
+            hrv: { min: 0, max: 200, normal: [20, 100] }
+        };
+
+        // Initialize
+        checkSystemStatus();
+        setupInputValidation();
+
+        function setupInputValidation() {
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('input', function() {
+                    validateInput(this);
+                    updateButtonState();
+                });
+            });
+        }
+
+        function validateInput(input) {
+            const value = parseFloat(input.value);
+            const range = ranges[input.id];
+            
+            if (isNaN(value)) {
+                input.classList.remove('valid', 'invalid');
+                return false;
+            }
+            
+            if (value < range.min || value > range.max) {
+                input.classList.add('invalid');
+                input.classList.remove('valid');
+                return false;
+            } else {
+                input.classList.add('valid');
+                input.classList.remove('invalid');
+                return true;
+            }
+        }
+
+        function updateButtonState() {
+            const btn = document.getElementById('predictBtn');
+            const allValid = inputs.every(id => {
+                const input = document.getElementById(id);
+                return input.value !== '' && validateInput(input);
+            });
+            btn.disabled = !allValid;
+        }
+
+        function getAllInputsValid() {
+            return inputs.every(id => {
+                const input = document.getElementById(id);
+                return input.value !== '' && validateInput(input);
+            });
+        }
+
+        function checkSystemStatus() {
+            fetch("/health")
+                .then(res => res.json())
+                .then(data => {
+                    const statusDiv = document.getElementById("systemStatus");
+                    if (data.status === "healthy") {
+                        statusDiv.innerHTML = `✅ System Online | ML Model: Ready | AI Analysis: ${data.groq_available ? 'Available' : 'Fallback Mode'}`;
+                    } else {
+                        statusDiv.innerHTML = "⚠️ System Limited Functionality";
+                    }
+                })
+                .catch(err => {
+                    document.getElementById("systemStatus").innerHTML = "❌ Cannot connect to server";
+                });
+        }
+
+        function predict() {
+            if (!getAllInputsValid()) {
+                showError("Please fill all fields with valid values within the specified ranges.");
+                return;
+            }
+
+            const data = {
+                HeartRate: Number(document.getElementById("hr").value),
+                SpO2: Number(document.getElementById("spo2").value),
+                Temperature: Number(document.getElementById("temp").value),
+                RR_interval: Number(document.getElementById("rr").value),
+                HRV: Number(document.getElementById("hrv").value)
+            };
+
+            const resultsPanel = document.getElementById("resultsPanel");
+            const resultsContent = document.getElementById("resultsContent");
+            const btn = document.getElementById("predictBtn");
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = 'Analyzing...';
+            resultsPanel.style.display = 'block';
+            resultsContent.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <h3>Analyzing Health Data</h3>
+                    <p>ML Model Processing → AI Analysis → Generating Report</p>
+                </div>
+            `;
+
+            fetch("/predict", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(data)
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => { 
+                        throw new Error(err.error || `Server error: ${res.status}`); 
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                displayResults(data);
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                showError("Failed to get prediction: " + err.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = 'Analyze Health Status';
+            });
+        }
+
+        function formatContent(text) {
+            if (!text) return '';
+            
+            // Replace markdown-style headers
+            text = text.replace(/## (.*?)(?=\n|$)/g, '<h4>$1</h4>');
+            text = text.replace(/# (.*?)(?=\n|$)/g, '<h3>$1</h3>');
+            
+            // Replace bullet points
+            text = text.replace(/\n• /g, '\n<li>');
+            text = text.replace(/\n- /g, '\n<li>');
+            text = text.replace(/\n\* /g, '\n<li>');
+            
+            // Replace numbered lists
+            text = text.replace(/\n(\d+)\. /g, '\n<li>');
+            
+            // Wrap lists in ul
+            text = text.replace(/(<li>.*?(?=\n\n|\n[^<]|$))/gs, '<ul class="bullet-list">$1</ul>');
+            
+            // Replace line breaks with paragraphs
+            text = text.split('\n\n').map(paragraph => {
+                if (paragraph.trim() === '') return '';
+                if (paragraph.includes('<h3>') || paragraph.includes('<h4>') || paragraph.includes('<ul>')) {
+                    return paragraph;
+                }
+                return `<p>${paragraph.trim()}</p>`;
+            }).join('');
+            
+            return text;
+        }
+
+        function createWeeklyPlan(prediction) {
+            const plans = {
+                normal: [
+                    { day: 'Monday', focus: 'Cardio & Strength', meals: 'Balanced proteins' },
+                    { day: 'Tuesday', focus: 'Active Recovery', meals: 'Plant-based focus' },
+                    { day: 'Wednesday', focus: 'HIIT Training', meals: 'Complex carbs' },
+                    { day: 'Thursday', focus: 'Strength Training', meals: 'Lean proteins' },
+                    { day: 'Friday', focus: 'Cardio & Core', meals: 'Omega-3 rich' },
+                    { day: 'Saturday', focus: 'Outdoor Activity', meals: 'Antioxidant rich' },
+                    { day: 'Sunday', focus: 'Rest & Recovery', meals: 'Light & hydrating' }
+                ],
+                warning: [
+                    { day: 'Monday', focus: 'Gentle Walking', meals: 'Anti-inflammatory' },
+                    { day: 'Tuesday', focus: 'Yoga/Stretching', meals: 'Gut health' },
+                    { day: 'Wednesday', focus: 'Rest Day', meals: 'Hydration focus' },
+                    { day: 'Thursday', focus: 'Light Walking', meals: 'Heart healthy' },
+                    { day: 'Friday', focus: 'Breathing Exercises', meals: 'Easy digestion' },
+                    { day: 'Saturday', focus: 'Gentle Stretching', meals: 'Nutrient dense' },
+                    { day: 'Sunday', focus: 'Complete Rest', meals: 'Bone broth' }
+                ],
+                critical: [
+                    { day: 'Monday', focus: 'Medical Rest', meals: 'Liquid diet' },
+                    { day: 'Tuesday', focus: 'Hydration Focus', meals: 'Electrolytes' },
+                    { day: 'Wednesday', focus: 'Complete Rest', meals: 'Broths only' },
+                    { day: 'Thursday', focus: 'Medical Monitoring', meals: 'Soft foods' },
+                    { day: 'Friday', focus: 'Rest & Recovery', meals: 'Easy proteins' },
+                    { day: 'Saturday', focus: 'Gentle Movement', meals: 'Small portions' },
+                    { day: 'Sunday', focus: 'Medical Evaluation', meals: 'Balanced soft' }
+                ]
+            };
+            
+            const plan = plans[prediction] || plans.normal;
+            return plan.map(day => `
+                <div class="day-card">
+                    <div class="day-name">${day.day}</div>
+                    <div class="day-focus">${day.focus}</div>
+                    <div class="day-focus">${day.meals}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayResults(data) {
+            const analysis = data.analysis;
+            const predictionClass = analysis.prediction.toLowerCase();
+            
+            const resultsContent = `
+                <!-- Vital Signs Overview -->
+                <div class="vital-signs">
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.heart_rate}</div>
+                        <div class="vital-label">Heart Rate</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.spo2}%</div>
+                        <div class="vital-label">SpO2</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.temperature}°C</div>
+                        <div class="vital-label">Temperature</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.rr_interval}</div>
+                        <div class="vital-label">RR Interval</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.hrv}</div>
+                        <div class="vital-label">HRV</div>
+                    </div>
+                </div>
+
+                <!-- ML Prediction -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Health Assessment</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="highlight-box">
+                            <h3>${analysis.prediction} Status</h3>
+                            <p>Based on comprehensive analysis of your vital signs</p>
+                        </div>
+                        
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4>Risk Level</h4>
+                                <p>${analysis.prediction}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Monitoring Frequency</h4>
+                                <p>${predictionClass === 'normal' ? 'Weekly' : predictionClass === 'warning' ? 'Daily' : 'Continuous'}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Next Steps</h4>
+                                <p>${predictionClass === 'normal' ? 'Maintain' : predictionClass === 'warning' ? 'Monitor' : 'Immediate Action'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Analysis -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Detailed Analysis</h3>
+                    </div>
+                    <div class="section-content">
+                        ${formatContent(analysis.reason)}
+                    </div>
+                </div>
+
+                <!-- Action Plan -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Action Plan & Recommendations</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="action-steps">
+                            ${formatContent(analysis.recommendation)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nutrition & Diet Plan -->
+                <div class="result-section food-recommendation">
+                    <div class="section-title">
+                        <span>🍎</span>
+                        <h3>Nutrition & Diet Plan</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="tab-container">
+                            <div class="tabs">
+                                <div class="tab active" onclick="switchTab('daily-meals')">Daily Meal Plan</div>
+                                <div class="tab" onclick="switchTab('weekly-plan')">Weekly Schedule</div>
+                                <div class="tab" onclick="switchTab('food-guide')">Food Guide</div>
+                            </div>
+                            
+                            <div id="daily-meals" class="tab-content active">
+                                ${formatContent(analysis.food_recommendation)}
+                            </div>
+                            
+                            <div id="weekly-plan" class="tab-content">
+                                <h4>7-Day Wellness Schedule</h4>
+                                <div class="weekly-plan">
+                                    ${createWeeklyPlan(predictionClass)}
+                                </div>
+                                <div class="meal-plan">
+                                    <div class="meal-time">Weekly Focus</div>
+                                    <div class="meal-content">
+                                        <p><strong>Exercise:</strong> ${predictionClass === 'normal' ? '30-45 mins daily' : predictionClass === 'warning' ? '15-20 mins light activity' : 'Rest only'}</p>
+                                        <p><strong>Nutrition:</strong> ${predictionClass === 'normal' ? 'Balanced macros' : predictionClass === 'warning' ? 'Anti-inflammatory focus' : 'Medical supervision'}</p>
+                                        <p><strong>Hydration:</strong> ${predictionClass === 'normal' ? '2-3 liters daily' : predictionClass === 'warning' ? '2+ liters with electrolytes' : 'As medically directed'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="food-guide" class="tab-content">
+                                <div class="food-category">
+                                    <div class="category-title">✅ Recommended Foods</div>
+                                    <div class="food-list">
+                                        <div class="food-item">Leafy green vegetables</div>
+                                        <div class="food-item">Lean proteins (chicken, fish)</div>
+                                        <div class="food-item">Whole grains</div>
+                                        <div class="food-item">Fresh fruits</div>
+                                        <div class="food-item">Nuts and seeds</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="food-category">
+                                    <div class="category-title">❌ Foods to Avoid</div>
+                                    <div class="food-list">
+                                        <div class="food-item avoid">Processed foods</div>
+                                        <div class="food-item avoid">Sugary drinks</div>
+                                        <div class="food-item avoid">Excessive salt</div>
+                                        <div class="food-item avoid">Fried foods</div>
+                                        <div class="food-item avoid">Alcohol</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById("resultsContent").innerHTML = resultsContent;
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function showError(message) {
+            const resultsContent = document.getElementById("resultsContent");
+            resultsContent.innerHTML = `<div class="error">${message}</div>`;
+            document.getElementById("resultsPanel").style.display = 'block';
+        }
+
+        // Initialize button state
+        updateButtonState();
+    </script>
+</body>
+</html>

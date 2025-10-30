@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live IoT Sensor Data - Health Monitoring</title>
+    <style>
+        :root {
+            --normal: #27ae60;
+            --warning: #f39c12;
+            --critical: #e74c3c;
+            --primary: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+            --light-green: #d4f7e0;
+            --light-orange: #ffecc7;
+            --light-red: #ffd1d1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: white;
+        }
+        
+        .nav-btn.active {
+            background: white;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sensor-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .history-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .results-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 20px;
+            display: none;
+            grid-column: 1 / -1;
+        }
+        
+        .panel-title {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-connected {
+            background: var(--normal);
+        }
+        
+        .status-disconnected {
+            background: var(--critical);
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .sensor-card {
+            background: var(--light);
+            padding: 25px 20px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 5px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+        
+        .sensor-card.critical {
+            border-left-color: var(--critical);
+            background: #ffebee;
+        }
+        
+        .sensor-card.warning {
+            border-left-color: var(--warning);
+            background: #fff3e0;
+        }
+        
+        .sensor-card.normal {
+            border-left-color: var(--normal);
+            background: #e8f5e8;
+        }
+        
+        .sensor-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .sensor-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+        
+        .sensor-label {
+            font-size: 1rem;
+            color: var(--gray);
+            margin-bottom: 8px;
+        }
+        
+        .sensor-status {
+            font-size: 0.9rem;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .status-normal { background: var(--normal); color: white; }
+        .status-warning { background: var(--warning); color: white; }
+        .status-critical { background: var(--critical); color: white; }
+        
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .info-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .info-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .info-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .history-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .history-time {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+        
+        .history-values {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .history-value {
+            text-align: center;
+        }
+        
+        .predict-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .predict-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .predict-btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--primary);
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .mqtt-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        /* Results Styles - Integrated from predict.html */
+        .result-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background: var(--light);
+        }
+        
+        .result-section.normal { 
+            border-left: 5px solid var(--normal);
+            background: var(--light-green);
+        }
+        .result-section.warning { 
+            border-left: 5px solid var(--warning);
+            background: var(--light-orange);
+        }
+        .result-section.critical { 
+            border-left: 5px solid var(--critical);
+            background: var(--light-red);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .section-content {
+            line-height: 1.6;
+        }
+        
+        .analysis-time {
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .info-card h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .info-card p {
+            font-size: 0.85rem;
+            color: var(--dark);
+            font-weight: 500;
+        }
+        
+        .meal-plan {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .meal-time {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .meal-time::before {
+            content: "🍽️";
+            margin-right: 8px;
+        }
+        
+        .meal-content {
+            margin-left: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .weekly-plan {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .day-card {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .day-card.active {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+        
+        .day-name {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+        
+        .day-focus {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+        
+        .action-steps {
+            margin: 15px 0;
+        }
+        
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+        
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .food-category {
+            margin: 15px 0;
+        }
+        
+        .category-title {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .food-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .food-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--normal);
+        }
+        
+        .food-item.avoid {
+            border-left-color: var(--critical);
+            background: #ffebee;
+        }
+        
+        .tab-container {
+            margin: 20px 0;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .bullet-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .bullet-list li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .bullet-list li::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .error {
+            background: #ffeaea;
+            color: var(--critical);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--critical);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Live IoT Sensor Data</h1>
+            <p>Real-time health monitoring from connected IoT devices via MQTT</p>
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="/" class="nav-btn">🏠 Home</a>
+            <a href="/sensors" class="nav-btn active">📊 Sensors</a>
+            <a href="/predict" class="nav-btn">🔍 Manual Analysis</a>
+        </div>
+        
+        <div class="dashboard">
+            <div class="sensor-panel">
+                <div class="panel-title">
+                    <span>Current Vital Signs from IoT Sensors</span>
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-dot status-disconnected"></span>
+                        <span>Connecting to MQTT...</span>
+                    </div>
+                </div>
+                
+                <div class="mqtt-info">
+                    <strong>MQTT Connection:</strong> 
+                    <span id="mqttStatus">Waiting for sensor data...</span>
+                    <br>
+                    <small>Topic: health/sensors | Data updates in real-time</small>
+                </div>
+                
+                <div id="sensorGrid" class="sensor-grid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Waiting for IoT sensor data...</p>
+                    </div>
+                </div>
+                
+                <div class="device-info" id="deviceInfo">
+                    <!-- Device info will be populated here -->
+                </div>
+                
+                <button class="predict-btn" onclick="analyzeCurrentData()" id="predictBtn" disabled>
+                    🔍 Analyze Current IoT Data with AI
+                </button>
+                
+                <div class="last-updated">
+                    <span id="lastUpdate">Waiting for data...</span>
+                </div>
+            </div>
+            
+            <div class="history-panel">
+                <div class="panel-title">Recent Sensor History</div>
+                <div id="historyList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading history...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Panel - Will be shown after analysis -->
+        <div class="results-panel" id="resultsPanel">
+            <div class="panel-title">
+                <span>🤖 AI Health Analysis Results</span>
+                <button class="nav-btn" onclick="hideResults()" style="padding: 5px 15px; font-size: 0.9rem;">
+                    Hide Results
+                </button>
+            </div>
+            <div id="resultsContent">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSensorData = null;
+        let mqttConnected = false;
+        
+        function updateSensorData() {
+            fetch("/api/sensor-data")
+                .then(res => res.json())
+                .then(data => {
+                    mqttConnected = data.mqtt_connected;
+                    currentSensorData = data.current;
+                    updateConnectionStatus(mqttConnected);
+                    displayCurrentData(data.current);
+                    displayHistory(data.history);
+                    updateLastUpdated();
+                    updatePredictButton();
+                })
+                .catch(err => {
+                    console.error('Error fetching sensor data:', err);
+                    updateConnectionStatus(false);
+                });
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            const mqttStatusElement = document.getElementById('mqttStatus');
+            const statusDot = statusElement.querySelector('.status-dot');
+            
+            if (connected) {
+                statusDot.className = 'status-dot status-connected';
+                statusElement.innerHTML = `
+                    <span class="status-dot status-connected"></span>
+                    <span>Connected to IoT Devices</span>
+                `;
+                mqttStatusElement.textContent = '✅ Connected - Receiving real-time data';
+                mqttStatusElement.style.color = 'var(--normal)';
+            } else {
+                statusDot.className = 'status-dot status-disconnected';
+                statusElement.innerHTML = `
+                    <span class="status-dot status-disconnected"></span>
+                    <span>Disconnected from IoT Devices</span>
+                `;
+                mqttStatusElement.textContent = '❌ Disconnected - No sensor data';
+                mqttStatusElement.style.color = 'var(--critical)';
+            }
+        }
+        
+        function getStatus(value, min, max) {
+            if (value === 0) return 'critical'; // No data
+            if (value < min || value > max) return 'critical';
+            if (value < min * 1.1 || value > max * 0.9) return 'warning';
+            return 'normal';
+        }
+        
+        function displayCurrentData(data) {
+            const sensorGrid = document.getElementById('sensorGrid');
+            
+            if (!data.connected || data.heart_rate === 0) {
+                sensorGrid.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; grid-column: 1 / -1;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">📡</div>
+                        <h3>Waiting for IoT Sensor Data</h3>
+                        <p>Please ensure your IoT devices are connected and publishing to MQTT topic: health/sensors</p>
+                        <p><small>Test data is being published automatically for demonstration</small></p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sensors = [
+                {
+                    icon: '❤️',
+                    label: 'Heart Rate',
+                    value: data.heart_rate,
+                    unit: 'bpm',
+                    status: getStatus(data.heart_rate, 60, 100),
+                    normalRange: '60-100 bpm'
+                },
+                {
+                    icon: '💨',
+                    label: 'SpO2',
+                    value: data.spo2,
+                    unit: '%',
+                    status: getStatus(data.spo2, 95, 100),
+                    normalRange: '95-100%'
+                },
+                {
+                    icon: '🌡️',
+                    label: 'Temperature',
+                    value: data.temperature,
+                    unit: '°C',
+                    status: getStatus(data.temperature, 36.1, 37.2),
+                    normalRange: '36.1-37.2°C'
+                },
+                {
+                    icon: '🫀',
+                    label: 'RR Interval',
+                    value: data.rr_interval,
+                    unit: 'ms',
+                    status: getStatus(data.rr_interval, 600, 1000),
+                    normalRange: '600-1000 ms'
+                },
+                {
+                    icon: '📈',
+                    label: 'HRV',
+                    value: data.hrv,
+                    unit: 'ms',
+                    status: getStatus(data.hrv, 20, 100),
+                    normalRange: '20-100 ms'
+                }
+            ];
+            
+            sensorGrid.innerHTML = sensors.map(sensor => `
+                <div class="sensor-card ${sensor.status}">
+                    <div class="sensor-icon">${sensor.icon}</div>
+                    <div class="sensor-value">${sensor.value}${sensor.unit}</div>
+                    <div class="sensor-label">${sensor.label}</div>
+                    <div class="sensor-status status-${sensor.status}">
+                        ${sensor.status.toUpperCase()}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                        ${sensor.normalRange}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update device info
+            document.getElementById('deviceInfo').innerHTML = `
+                <div class="info-item">
+                    <div class="info-value">${data.battery}%</div>
+                    <div class="info-label">Battery</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${data.signal_strength}%</div>
+                    <div class="info-label">Signal</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">IoT</div>
+                    <div class="info-label">Device Type</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">Online</div>
+                    <div class="info-label">Status</div>
+                </div>
+            `;
+        }
+        
+        function displayHistory(history) {
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No history data available</div>';
+                return;
+            }
+            
+            historyList.innerHTML = history.map(reading => `
+                <div class="history-item">
+                    <div class="history-time">${reading.timestamp}</div>
+                    <div class="history-values">
+                        <div class="history-value">
+                            <strong>HR:</strong> ${reading.heart_rate}bpm
+                        </div>
+                        <div class="history-value">
+                            <strong>SpO2:</strong> ${reading.spo2}%
+                        </div>
+                        <div class="history-value">
+                            <strong>Temp:</strong> ${reading.temperature}°C
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateLastUpdated() {
+            if (currentSensorData && currentSensorData.timestamp) {
+                document.getElementById('lastUpdate').textContent = 
+                    `Last sensor update: ${currentSensorData.timestamp}`;
+            } else {
+                document.getElementById('lastUpdate').textContent = 'Waiting for sensor data...';
+            }
+        }
+        
+        function updatePredictButton() {
+            const predictBtn = document.getElementById('predictBtn');
+            if (mqttConnected && currentSensorData && currentSensorData.heart_rate > 0) {
+                predictBtn.disabled = false;
+                predictBtn.innerHTML = '🔍 Analyze Current IoT Data with AI';
+            } else {
+                predictBtn.disabled = true;
+                predictBtn.innerHTML = '⚠️ Connect IoT Devices to Analyze';
+            }
+        }
+        
+        function analyzeCurrentData() {
+            if (!mqttConnected || !currentSensorData) {
+                alert('No IoT sensor data available. Please ensure devices are connected and publishing data.');
+                return;
+            }
+
+            const predictBtn = document.getElementById('predictBtn');
+            const originalText = predictBtn.innerHTML;
+            predictBtn.disabled = true;
+            predictBtn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0 auto;"></div> Analyzing...';
+
+            // Send current sensor data to prediction API
+            fetch("/api/predict", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    use_current: true  // This tells the backend to use current MQTT data
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showError('Prediction failed: ' + data.error);
+                    return;
+                }
+                
+                // Display comprehensive analysis results on the same page
+                displayAnalysisResults(data);
+                predictBtn.disabled = false;
+                predictBtn.innerHTML = originalText;
+            })
+            .catch(err => {
+                console.error('Prediction error:', err);
+                showError('Failed to analyze data: ' + err.message);
+                predictBtn.disabled = false;
+                predictBtn.innerHTML = originalText;
+            });
+        }
+
+        function formatContent(text) {
+            if (!text) return '';
+            
+            // Replace markdown-style headers
+            text = text.replace(/## (.*?)(?=\n|$)/g, '<h4>$1</h4>');
+            text = text.replace(/# (.*?)(?=\n|$)/g, '<h3>$1</h3>');
+            
+            // Replace bullet points
+            text = text.replace(/\n• /g, '\n<li>');
+            text = text.replace(/\n- /g, '\n<li>');
+            text = text.replace(/\n\* /g, '\n<li>');
+            
+            // Replace numbered lists
+            text = text.replace(/\n(\d+)\. /g, '\n<li>');
+            
+            // Wrap lists in ul
+            text = text.replace(/(<li>.*?(?=\n\n|\n[^<]|$))/gs, '<ul class="bullet-list">$1</ul>');
+            
+            // Replace line breaks with paragraphs
+            text = text.split('\n\n').map(paragraph => {
+                if (paragraph.trim() === '') return '';
+                if (paragraph.includes('<h3>') || paragraph.includes('<h4>') || paragraph.includes('<ul>')) {
+                    return paragraph;
+                }
+                return `<p>${paragraph.trim()}</p>`;
+            }).join('');
+            
+            return text;
+        }
+
+        function createWeeklyPlan(prediction) {
+            const plans = {
+                normal: [
+                    { day: 'Monday', focus: 'Cardio & Strength', meals: 'Balanced proteins' },
+                    { day: 'Tuesday', focus: 'Active Recovery', meals: 'Plant-based focus' },
+                    { day: 'Wednesday', focus: 'HIIT Training', meals: 'Complex carbs' },
+                    { day: 'Thursday', focus: 'Strength Training', meals: 'Lean proteins' },
+                    { day: 'Friday', focus: 'Cardio & Core', meals: 'Omega-3 rich' },
+                    { day: 'Saturday', focus: 'Outdoor Activity', meals: 'Antioxidant rich' },
+                    { day: 'Sunday', focus: 'Rest & Recovery', meals: 'Light & hydrating' }
+                ],
+                warning: [
+                    { day: 'Monday', focus: 'Gentle Walking', meals: 'Anti-inflammatory' },
+                    { day: 'Tuesday', focus: 'Yoga/Stretching', meals: 'Gut health' },
+                    { day: 'Wednesday', focus: 'Rest Day', meals: 'Hydration focus' },
+                    { day: 'Thursday', focus: 'Light Walking', meals: 'Heart healthy' },
+                    { day: 'Friday', focus: 'Breathing Exercises', meals: 'Easy digestion' },
+                    { day: 'Saturday', focus: 'Gentle Stretching', meals: 'Nutrient dense' },
+                    { day: 'Sunday', focus: 'Complete Rest', meals: 'Bone broth' }
+                ],
+                critical: [
+                    { day: 'Monday', focus: 'Medical Rest', meals: 'Liquid diet' },
+                    { day: 'Tuesday', focus: 'Hydration Focus', meals: 'Electrolytes' },
+                    { day: 'Wednesday', focus: 'Complete Rest', meals: 'Broths only' },
+                    { day: 'Thursday', focus: 'Medical Monitoring', meals: 'Soft foods' },
+                    { day: 'Friday', focus: 'Rest & Recovery', meals: 'Easy proteins' },
+                    { day: 'Saturday', focus: 'Gentle Movement', meals: 'Small portions' },
+                    { day: 'Sunday', focus: 'Medical Evaluation', meals: 'Balanced soft' }
+                ]
+            };
+            
+            const plan = plans[prediction] || plans.normal;
+            return plan.map(day => `
+                <div class="day-card">
+                    <div class="day-name">${day.day}</div>
+                    <div class="day-focus">${day.focus}</div>
+                    <div class="day-focus">${day.meals}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayAnalysisResults(data) {
+            const resultsPanel = document.getElementById('resultsPanel');
+            const resultsContent = document.getElementById('resultsContent');
+            const analysis = data.analysis;
+            const predictionClass = analysis.prediction.toLowerCase();
+            
+            const resultsHTML = `
+                <div class="analysis-time">
+                    Analysis performed at: ${data.timestamp} | Data Source: Real-time IoT Sensors
+                </div>
+
+                <!-- Vital Signs Overview -->
+                <div class="vital-signs">
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.heart_rate}</div>
+                        <div class="vital-label">Heart Rate</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.spo2}%</div>
+                        <div class="vital-label">SpO2</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.temperature}°C</div>
+                        <div class="vital-label">Temperature</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.rr_interval}</div>
+                        <div class="vital-label">RR Interval</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">${data.vital_signs.hrv}</div>
+                        <div class="vital-label">HRV</div>
+                    </div>
+                </div>
+
+                <!-- Health Assessment -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Health Assessment</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="highlight-box">
+                            <h3>${analysis.prediction} Status</h3>
+                            <p>Based on real-time IoT sensor data analysis</p>
+                        </div>
+                        
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4>Risk Level</h4>
+                                <p style="color: var(--${predictionClass}); font-weight: bold;">${analysis.prediction}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Monitoring Frequency</h4>
+                                <p>${predictionClass === 'normal' ? 'Weekly' : predictionClass === 'warning' ? 'Daily' : 'Continuous'}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Next Steps</h4>
+                                <p>${predictionClass === 'normal' ? 'Maintain' : predictionClass === 'warning' ? 'Monitor' : 'Immediate Action'}</p>
+                            </div>
+                            <div class="info-card">
+                                <h4>Data Source</h4>
+                                <p>IoT Sensors</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Analysis -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Detailed Medical Analysis</h3>
+                    </div>
+                    <div class="section-content">
+                        ${formatContent(analysis.reason)}
+                    </div>
+                </div>
+
+                <!-- Action Plan -->
+                <div class="result-section ${predictionClass}">
+                    <div class="section-title">
+                        <span class="status-indicator status-${predictionClass}"></span>
+                        <h3>Action Plan & Recommendations</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="action-steps">
+                            ${formatContent(analysis.recommendation)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nutrition & Diet Plan -->
+                <div class="result-section" style="background: #fff9e6; border-left: 5px solid var(--warning);">
+                    <div class="section-title">
+                        <span>🍎</span>
+                        <h3>Nutrition & Diet Plan</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="tab-container">
+                            <div class="tabs">
+                                <div class="tab active" onclick="switchTab('daily-meals')">Daily Meal Plan</div>
+                                <div class="tab" onclick="switchTab('weekly-plan')">Weekly Schedule</div>
+                                <div class="tab" onclick="switchTab('food-guide')">Food Guide</div>
+                            </div>
+                            
+                            <div id="daily-meals" class="tab-content active">
+                                ${formatContent(analysis.food_recommendation)}
+                            </div>
+                            
+                            <div id="weekly-plan" class="tab-content">
+                                <h4>7-Day Wellness Schedule</h4>
+                                <div class="weekly-plan">
+                                    ${createWeeklyPlan(predictionClass)}
+                                </div>
+                                <div class="meal-plan">
+                                    <div class="meal-time">Weekly Focus</div>
+                                    <div class="meal-content">
+                                        <p><strong>Exercise:</strong> ${predictionClass === 'normal' ? '30-45 mins daily' : predictionClass === 'warning' ? '15-20 mins light activity' : 'Rest only'}</p>
+                                        <p><strong>Nutrition:</strong> ${predictionClass === 'normal' ? 'Balanced macros' : predictionClass === 'warning' ? 'Anti-inflammatory focus' : 'Medical supervision'}</p>
+                                        <p><strong>Hydration:</strong> ${predictionClass === 'normal' ? '2-3 liters daily' : predictionClass === 'warning' ? '2+ liters with electrolytes' : 'As medically directed'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="food-guide" class="tab-content">
+                                <div class="food-category">
+                                    <div class="category-title">✅ Recommended Foods</div>
+                                    <div class="food-list">
+                                        <div class="food-item">Leafy green vegetables</div>
+                                        <div class="food-item">Lean proteins (chicken, fish)</div>
+                                        <div class="food-item">Whole grains</div>
+                                        <div class="food-item">Fresh fruits</div>
+                                        <div class="food-item">Nuts and seeds</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="food-category">
+                                    <div class="category-title">❌ Foods to Avoid</div>
+                                    <div class="food-list">
+                                        <div class="food-item avoid">Processed foods</div>
+                                        <div class="food-item avoid">Sugary drinks</div>
+                                        <div class="food-item avoid">Excessive salt</div>
+                                        <div class="food-item avoid">Fried foods</div>
+                                        <div class="food-item avoid">Alcohol</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsContent.innerHTML = resultsHTML;
+            resultsPanel.style.display = 'block';
+            
+            // Scroll to results
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function hideResults() {
+            document.getElementById('resultsPanel').style.display = 'none';
+        }
+        
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function showError(message) {
+            const resultsContent = document.getElementById("resultsContent");
+            resultsContent.innerHTML = `<div class="error">${message}</div>`;
+            document.getElementById("resultsPanel").style.display = 'block';
+        }
+        
+        // Initial load
+        updateSensorData();
+        
+        // Update every 2 seconds for real-time data
+        setInterval(updateSensorData, 2000);
+    </script>
+</body>
+</html>
