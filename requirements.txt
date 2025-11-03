@@ -7,5 +7,4 @@ python-dotenv
 paho-mqtt
 xgboost
 lightgbm
-pickle5
 gunicorn
