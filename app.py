@@ -157,7 +157,7 @@ except Exception as e:
             return result
     
     label_encoder = FallbackLabelEncoder()
-api_key = os.getenv("GROQ_API_KEY")
+api_key = os.getenv("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")
 # ✅ Groq Client
 try:
     client = Groq(api_key=api_key)
