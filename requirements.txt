@@ -7,4 +7,5 @@ python-dotenv
 paho-mqtt
 xgboost
 lightgbm
+joblib
 gunicorn
